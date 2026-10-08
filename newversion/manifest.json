@@ -1,0 +1,29 @@
+{
+  "project": "tab5_retro_arcade",
+  "version": "0.1.0",
+  "target": "esp32p4",
+  "idf": "v5.4.4",
+  "ota": {
+    "file": "tab5_retro_arcade-ota.bin",
+    "bytes": 975104,
+    "format": "application-only",
+    "conservative_slot_limit_bytes": 1638400,
+    "destination_offset": "selected by installed Launcher partition table"
+  },
+  "usb": {
+    "file": "tab5_retro_arcade-usb-full.bin",
+    "bytes": 1171712,
+    "write_offset": "0x0",
+    "format": "merged bootloader + standalone partition table + application",
+    "components": {
+      "0x2000": "bootloader/bootloader.bin",
+      "0x30000": "tab5_retro_arcade.bin",
+      "0x8000": "partition_table/partition-table.bin"
+    }
+  },
+  "hardware_validation": "pending; no flash/serial access performed",
+  "files": {
+    "tab5_retro_arcade-ota.bin": "2218a36948359b3487f7892bc03ccec656fc62058bedd886e7f9a768e8a3d5a3",
+    "tab5_retro_arcade-usb-full.bin": "a5b23b6f77f7ad5b0b127c0924a5b2b5bbac1dc3449e07b5d685cf354097668f"
+  }
+}

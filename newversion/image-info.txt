@@ -1,0 +1,48 @@
+esptool.py v4.12.0
+File size: 975104 (bytes)
+
+ESP32P4 image header
+====================
+Image version: 1
+Entry point: 0x4ff003f8
+Segments: 7
+Flash size: 16MB
+Flash freq: 80m
+Flash mode: DIO
+
+ESP32P4 extended image header
+=============================
+WP pin: 0xee (disabled)
+Flash pins drive settings: clk_drv: 0x0, q_drv: 0x0, d_drv: 0x0, cs0_drv: 0x0, hd_drv: 0x0, wp_drv: 0x0
+Chip ID: 18 (ESP32-P4)
+Minimal chip revision: v0.1, (legacy min_rev = 0)
+Maximal chip revision: v1.99
+
+Segments information
+====================
+Segment   Length   Load addr   File offs  Memory types
+-------  -------  ----------  ----------  ------------
+      0  0x40af0  0x400a0020  0x00000018  DROM, IROM
+      1  0x00068  0x30100000  0x00040b10  
+      2  0x0f490  0x4ff00000  0x00040b80  DRAM, BYTE_ACCESSIBLE, IRAM
+      3  0x98834  0x40000020  0x00050018  DROM, IROM
+      4  0x013e4  0x4ff0f490  0x000e8854  DRAM, BYTE_ACCESSIBLE, IRAM
+      5  0x04470  0x4ff10880  0x000e9c40  DRAM, BYTE_ACCESSIBLE, IRAM
+      6  0x0001c  0x50108080  0x000ee0b8  RTC_IRAM, RTC_DRAM
+
+ESP32P4 image footer
+====================
+Checksum: 0x59 (valid)
+Validation hash: 9b3e81ec75e3d47b48127b2ea3b7df07372252328a8eab1f1a457debae80e73f (valid)
+
+Application information
+=======================
+Project name: tab5_retro_arcade
+App version: 0.1.0
+Compile time: Oct  8 2026 01:37:08
+ELF file SHA256: 9e579ba64e4f6739e541a9ee600c98e922707d3ef1b74dcef721752b7ac5d93b
+ESP-IDF: v5.4.4
+Minimal eFuse block revision: 0.0
+Maximal eFuse block revision: 1.99
+MMU page size: 64 KB
+Secure version: 0

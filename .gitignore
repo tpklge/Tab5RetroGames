@@ -1,0 +1,11 @@
+/build/
+/tests/build/
+/managed_components/
+/sdkconfig
+/sdkconfig.old
+/.claude/
+/.vscode/
+.DS_Store
+*.tmp
+__pycache__/
+*.pyc

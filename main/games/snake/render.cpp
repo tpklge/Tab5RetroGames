@@ -6,13 +6,13 @@ void SnakeGame::render(Canvas &canvas) const {
     const auto &state = model.state;
     constexpr int bx = 235, by = 110, cell = 24;
     canvas.rect(bx - 4, by - 4, Width * cell + 8, Height * cell + 8, color::Cyan, 4);
-    canvas.rect(bx, by, Width * cell, Height * cell, 0x0f1924);
+    canvas.checkerboard(bx, by, Width, Height, cell, 0x0f1924, 0x142032);
     for (int i = 0; i < Capacity; ++i) {
         int x = bx + (i % Width) * cell, y = by + (i / Width) * cell;
-        if (state.walls[i])
+        if (state.walls[i]) {
+            canvas.rect(x, y, 24, 24, 0x0f1924);
             canvas.rect(x + 1, y + 1, 22, 22, 0x4b658c, 3);
-        else if (((i % Width) + (i / Width)) % 2)
-            canvas.rect(x, y, 24, 24, 0x142032);
+        }
     }
     for (const auto &food : state.food)
         if (food.active) {

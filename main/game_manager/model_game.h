@@ -1,9 +1,16 @@
 #pragma once
 #include "game.h"
 namespace arcade {
-template <class Model> class ModelGame : public Game {
+template <class Model, class Derived> class ModelGame : public Game {
   public:
     Model model;
+    Game *render_copy() const override {
+        // UI-thread-only snapshot. No per-frame allocation, and no simulation
+        // lock is held while LVGL rasterizes the copied state.
+        static Derived view;
+        view.model = model;
+        return &view;
+    }
     void init(const Options &options) override { model.begin(options); }
     void start() override { model.state.status = Status::Running; }
     void update(uint32_t delta, const Controls &controls) override { model.step(delta, controls); }

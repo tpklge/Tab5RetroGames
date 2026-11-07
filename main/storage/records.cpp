@@ -1,8 +1,14 @@
 #include "records.h"
+#include "file_names.h"
 #include <algorithm>
 #include <cstdio>
 namespace arcade {
 bool record_better(GameId game, uint8_t mode, const Record &first, const Record &second) {
+    if (game == GameId::Sokoban) {
+        if (first.won != second.won) return first.won > second.won;
+        if (first.won && first.level != second.level) return first.level > second.level;
+        if (first.won && first.distance != second.distance) return first.distance < second.distance;
+    }
     if ((game == GameId::BlockDrop || game == GameId::Racer) && mode == 1) {
         if (first.won != second.won)
             return first.won > second.won;
@@ -30,12 +36,11 @@ void insert_record(Leaderboard &board, GameId game, uint8_t mode, Record record)
     board.count = uint8_t(count);
 }
 std::string Records::key(GameId game, uint8_t mode, uint8_t difficulty) {
-    char key[15];
-    std::snprintf(key, sizeof(key), "rank%u%u%u", unsigned(game), mode, difficulty);
-    return key;
+    return rank_key(unsigned(game), mode, difficulty);
 }
 bool Records::load(GameId game, uint8_t mode, uint8_t difficulty, Leaderboard &board) {
     std::vector<uint8_t> bytes;
+    if (key(game, mode, difficulty).empty()) { board = Leaderboard{}; return false; }
     Leaderboard restored;
     if (!journal.read(key(game, mode, difficulty), 2, bytes) || !decode(bytes, restored) ||
         restored.count > 10) {
@@ -52,6 +57,7 @@ bool Records::load(GameId game, uint8_t mode, uint8_t difficulty, Leaderboard &b
     return true;
 }
 bool Records::add(GameId game, uint8_t mode, uint8_t difficulty, Record record) {
+    if (key(game, mode, difficulty).empty()) return false;
     Leaderboard board;
     std::fill_n(reinterpret_cast<uint8_t *>(&board), sizeof(board), 0);
     load(game, mode, difficulty, board);
@@ -59,6 +65,7 @@ bool Records::add(GameId game, uint8_t mode, uint8_t difficulty, Record record) 
     return journal.write(key(game, mode, difficulty), 2, snapshot(board));
 }
 bool Records::erase(GameId game, uint8_t mode, uint8_t difficulty) {
-    return journal.erase(key(game, mode, difficulty));
+    auto name = key(game, mode, difficulty);
+    return !name.empty() && journal.erase(name);
 }
 } // namespace arcade

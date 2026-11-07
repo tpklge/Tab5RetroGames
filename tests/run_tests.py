@@ -22,10 +22,28 @@ def compile_test(name, sources, extra=()):
     run(['c++', *FLAGS, *('-I'+str(ROOT/p) for p in INCLUDES), *extra, *(str(ROOT/p) for p in sources), '-o', str(target)])
     run([str(target)])
 
+run([sys.executable, str(ROOT/'tests/backup_reader_test.py')])
+
+# Compile the actual ESP-IDF FatFs core against a RAM disk with short names.
+IDF = Path(ENV.get('IDF_PATH', Path.home()/'esp/esp-idf'))
+FATFS = IDF/'components/fatfs/src'
+fat_object = BUILD/'fatfs.o'
+fat_includes = ['-I'+str(ROOT/'tests/fatfs_stubs'), '-I'+str(FATFS)]
+run(['cc', '-std=c11', '-g', '-fsanitize=address,undefined', *fat_includes,
+     '-c', str(FATFS/'ff.c'), '-o', str(fat_object)])
+compile_test('fatfs', ['tests/fatfs_test.cpp', str(fat_object)], fat_includes)
+
 compile_test('input', ['tests/input_test.cpp','main/input/input_state.cpp'])
-for game, test in [('block_drop','block'),('snake','snake'),('retro_racer','racer')]:
+compile_test('sd_mount', ['tests/sd_mount_test.cpp','main/storage/sd_card.cpp'], ['-I'+str(ROOT/'tests/sd_stubs')])
+for game, test in [('block_drop','block'),('snake','snake'),('retro_racer','racer'),('space_invaders','invaders'),('space_impact','impact'),('breakout','breakout'),('frogger','frogger'),('pacman','pacman'),('bomberman','bomberman'),('sokoban','sokoban'),('asteroids','asteroids')]:
     compile_test(test, [f'tests/{test}_test.cpp',f'main/games/{game}/model.cpp'], ['-I'+str(ROOT/f'main/games/{game}')])
 compile_test('storage', ['tests/storage_test.cpp','main/storage/journal.cpp','main/storage/records.cpp','main/storage/settings.cpp'])
+
+file_sources = ['tests/file_storage_test.cpp', 'main/storage/file_backend.cpp',
+                'main/storage/journal.cpp', 'main/storage/records.cpp', 'main/storage/settings.cpp',
+                'main/game_manager/game_manager.cpp']
+file_sources += [str(p.relative_to(ROOT)) for p in (ROOT/'main/games').glob('*/*.cpp')]
+compile_test('file_storage', file_sources)
 
 config=BUILD/'lv_conf.h'
 config.write_text('''#pragma once

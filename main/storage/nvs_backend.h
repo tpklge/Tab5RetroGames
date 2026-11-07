@@ -8,6 +8,7 @@ class NvsBackend : public Backend {
     bool read(const std::string &key, std::vector<uint8_t> &bytes) override;
     bool write(const std::string &key, const std::vector<uint8_t> &bytes) override;
     bool erase(const std::string &key) override;
+    std::string description() const override { return "Memoria interna (NVS)"; }
     bool available() const { return handle != 0; }
     size_t free_entries() const;
 

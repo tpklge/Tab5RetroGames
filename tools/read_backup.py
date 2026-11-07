@@ -27,7 +27,7 @@ def entries(data):
         offset += key_size
         record = data[offset:offset + size]
         offset += size
-        if not re.fullmatch(r'(config|save\d+|rank\d+)[ab]', key) or key in found:
+        if not re.fullmatch(r'(config|save\d+|rank(?:\d+|[A-Z][0-3][0-3]))[ab]', key) or key in found:
             raise ValueError('Invalid or duplicate storage key')
         found.add(key)
         magic, version, kind, generation, length, crc = struct.unpack_from('<6I', record)

@@ -49,7 +49,7 @@ bool Journal::read(const std::string &key, uint32_t kind, std::vector<uint8_t> &
     return true;
 }
 bool Journal::write(const std::string &key, uint32_t kind, const std::vector<uint8_t> &payload) {
-    if (payload.size() > 65536 || key.size() > 14)
+    if (payload.size() > 65536 || key.size() > 14 || !backend.prepare_write())
         return false;
     uint32_t a = 0, b = 0;
     std::vector<uint8_t> first, second;

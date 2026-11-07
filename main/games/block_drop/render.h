@@ -2,7 +2,7 @@
 #include "model.h"
 #include "model_game.h"
 namespace arcade::block {
-class BlockGame : public ModelGame<Model> {
+class BlockGame : public ModelGame<Model, BlockGame> {
   public:
     void render(Canvas &canvas) const override;
     void reset() override {

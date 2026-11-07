@@ -6,6 +6,9 @@ namespace arcade {
 class Backend {
   public:
     virtual ~Backend() = default;
+    virtual bool prepare_write() { return true; }
+    virtual std::string error() const { return {}; }
+    virtual std::string description() const { return "Armazenamento local"; }
     virtual bool read(const std::string &key, std::vector<uint8_t> &bytes) = 0;
     virtual bool write(const std::string &key, const std::vector<uint8_t> &bytes) = 0;
     virtual bool erase(const std::string &key) = 0;

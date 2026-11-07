@@ -6,6 +6,7 @@
 #include "games/block_drop/render.h"
 #include "games/snake/render.h"
 #include "games/retro_racer/render.h"
+#include "games/sokoban/render.h"
 #include <algorithm>
 #include <cstdio>
 #include <ctime>
@@ -44,6 +45,7 @@ std::string key_name(uint8_t code) {
 int cycle(int value, int direction, int count) { return (value + direction + count) % count; }
 } // namespace
 void Application::init() {
+    std::lock_guard<std::recursive_mutex> guard(state_mutex);
     load_settings(journal, settings);
     apply_settings();
     if (!keyboard::available())
@@ -79,6 +81,7 @@ void Application::confirm(const char *message, std::function<void()> action, Scr
     show(Screen::Confirm);
 }
 void Application::show(Screen screen, unsigned selection) {
+    std::lock_guard<std::recursive_mutex> guard(state_mutex);
     if (surface)
         lv_obj_delete(surface);
     surface = fps_label = nullptr;
@@ -104,7 +107,8 @@ void Application::show(Screen screen, unsigned selection) {
     };
     if (screen == Screen::Home) {
         if (description.empty())
-            description = "Pequenos jogos, grandes partidas. Escolha sua proxima aventura.";
+            description = "Pequenos jogos, grandes partidas.\nSalvamento: " + backend.description() +
+                          (backend.error().empty() ? "" : "\n" + backend.error());
         items = {{"Jogar", go(Screen::Games)},
                  {"Continuar partida",
                   [this] {
@@ -138,7 +142,7 @@ void Application::show(Screen screen, unsigned selection) {
                      show(Screen::Setup);
                  },
                  {},
-                 int(index % 3)});
+                 int(index)});
         items.push_back({"Voltar", go(Screen::Home)});
     } else if (screen == Screen::Setup) {
         title = selected.name;
@@ -227,9 +231,10 @@ void Application::show(Screen screen, unsigned selection) {
                 if (gmtime_r(&timestamp, &calendar))
                     std::strftime(date, sizeof(date), "  %Y-%m-%d", &calendar);
             }
-            std::snprintf(row, sizeof(row), "%02u. %-15s  %lu pts  Nivel %u  %lu s  %lu m%s", i + 1,
+            std::snprintf(row, sizeof(row), "%02u. %-15s  %lu pts  Nivel %u  %lu s  %lu %s%s", i + 1,
                           record.player, (unsigned long)record.score, record.level,
                           (unsigned long)(record.time_ms / 1000), (unsigned long)record.distance,
+                          selected.id == GameId::Sokoban ? (options.mode == 2 ? "emp" : "mov") : "m",
                           record.won ? "  CONCLUIDO" : "");
             std::strncat(row, date, sizeof(row) - std::strlen(row) - 1);
             items.push_back({row, {}, {}});
@@ -248,6 +253,8 @@ void Application::show(Screen screen, unsigned selection) {
                          }});
         items.push_back({"Voltar", go(Screen::Home)});
     } else if (screen == Screen::Settings) {
+        if (description.empty()) description = "Salvamento: " + backend.description() +
+            (backend.error().empty() ? "" : "\n" + backend.error());
         title = "CONFIGURACOES";
         auto number = [&](const char *label, uint8_t *field, int min, int max, int step) {
             value(std::string(label) + ": " + std::to_string(*field),
@@ -358,9 +365,9 @@ void Application::show(Screen screen, unsigned selection) {
     } else if (screen == Screen::About) {
         title = "SOBRE O ARCADE";
         description =
-            "Tab5 Retro Arcade / Pipoca5\nTres jogos 2D offline para M5Stack Tab5.\nCodigo "
+            "Tab5 Retro Arcade / Pipoca5\nOnze jogos 2D offline para M5Stack Tab5.\nCodigo "
             "original MIT. Componentes M5Stack e Espressif com suas licencas.\nBlock Drop, Snake e "
-            "Retro Racer.\nTeclado fisico e toque nos menus. Sons sintetizados originais.\nFPS "
+            "Retro Racer, Space Invaders, Space Impact, Quebra-blocos, Frogger, Pac-Man, Bomberman, Sokoban e Asteroids.\nTeclado fisico e toque nos menus. Sons sintetizados originais.\nFPS "
             "exibido e medido pelo renderer; confirmar desempenho no Tab5.";
         items = {{"Voltar", go(Screen::Home)}};
     } else if (screen == Screen::Pause) {
@@ -503,26 +510,38 @@ void Application::game_screen() {
         lv_obj_add_flag(fps_label, LV_OBJ_FLAG_HIDDEN);
     accumulator = 0;
     step_fraction = 0;
+    previous_game_us = 0;
+    previous_steps = simulation_steps;
     last_frame = 0;
+    last_hud_frame = 0;
     fps_since = previous_us;
     frame_count = display::refreshes();
     visual_valid = false;
 }
 void Application::draw(lv_layer_t *layer) {
+    Game *frame = nullptr;
+    unsigned frame_game;
+    Options frame_options;
+    uint8_t theme;
+    uint64_t animation;
+    {
+        std::lock_guard<std::recursive_mutex> guard(state_mutex);
+        frame = active ? active->render_copy() : nullptr;
+        frame_game = selected_game; frame_options = options; theme = settings.theme;
+        animation = finished_since ? std::min<uint64_t>(1400, (previous_us - finished_since) / 1000) : 0;
+    }
     LvglCanvas canvas(layer);
     const uint32_t backgrounds[] = {color::Bg, 0x210e35, 0x10181b};
-    canvas.rect(0, 0, 1280, 720, backgrounds[settings.theme]);
+    canvas.rect(0, 0, 1280, 720, backgrounds[theme]);
     canvas.text(35, 20, "TAB5 RETRO ARCADE", color::Cyan, Font::Pixel);
-    canvas.text(380, 20, registry()[selected_game].modes[options.mode], color::Muted, Font::Small);
-    if (active)
-        active->render(canvas);
+    canvas.text(380, 20, registry()[frame_game].modes[frame_options.mode], color::Muted, Font::Small);
+    if (frame)
+        frame->render(canvas);
     canvas.text(35, 690, "P / Esc: pausa     R: reiniciar     M: som", color::Muted, Font::Small);
-    if (active && (active->status() == Status::Won || active->status() == Status::Lost)) {
-        uint64_t animation =
-            finished_since ? std::min<uint64_t>(1400, (previous_us - finished_since) / 1000) : 0;
+    if (frame && (frame->status() == Status::Won || frame->status() == Status::Lost)) {
         canvas.rect(350, 235, 580, 180, color::Panel, 12, uint8_t(160 + animation * 75 / 1400));
         canvas.text(405, 265,
-                    active->status() == Status::Won ? "PARTIDA CONCLUIDA!" : "FIM DE JOGO",
+                    frame->status() == Status::Won ? "PARTIDA CONCLUIDA!" : "FIM DE JOGO",
                     color::Gold, Font::Title);
         canvas.text(405, 330, "Preparando seu recorde...", color::Text);
         canvas.rect(405, 380, int(470 * animation / 1400), 4, color::Gold, 2);
@@ -532,9 +551,9 @@ bool Application::save_active() {
     if (!active)
         return false;
     bool saved = journal.write(save_key(selected_game), 3, active->save());
-    notice =
-        saved ? "Partida salva. Voce pode continuar depois."
-              : "Falha ao salvar. NVS indisponivel ou sem espaco; a partida continua na memoria.";
+    notice = saved ? "Partida salva em " + backend.description() + ". Voce pode continuar depois."
+                   : "Falha ao salvar: " + backend.description() + ".\n" + backend.error() +
+                     "\nA partida continua na memoria. Insira o cartao e tente salvar novamente.";
     return saved;
 }
 void Application::pause_game() {
@@ -697,9 +716,73 @@ void Application::handle_sounds() {
         if (sounds & bits[i])
             audio::play(effects[i]);
 }
-void Application::tick(uint64_t now_us) {
+void Application::independent_updates(bool enabled) {
+    std::lock_guard<std::recursive_mutex> guard(state_mutex);
+    independent = enabled;
+    previous_game_us = accumulator = step_fraction = 0;
+}
+void Application::poll_game(uint64_t now_us) {
+    std::lock_guard<std::recursive_mutex> guard(state_mutex);
+    if (!independent) return;
     uint32_t now = uint32_t(now_us / 1000);
     keyboard::drain(input, now);
+    uint64_t delta = previous_game_us ? now_us - previous_game_us : 0;
+    previous_game_us = now_us;
+    if (current != Screen::Playing || !active || active->status() != Status::Running) return;
+    // Freeze immediately; the UI task handles menus/storage without touching
+    // LVGL from this thread. Preserve these edges until that task consumes them.
+    if (input.pressed(binding(Binding::Pause)) || input.pressed(binding(Binding::Back)) ||
+        input.pressed(binding(Binding::Restart)) || input.pressed(binding(Binding::Mute))) {
+        accumulator = 0;
+        return;
+    }
+    advance_game(delta, now);
+    input.end_frame();
+}
+void Application::advance_game(uint64_t delta_us, uint32_t now) {
+    const Binding binds[] = {Binding::Left, Binding::Right,   Binding::Up,
+                             Binding::Down, Binding::Primary, Binding::CounterRotate,
+                             Binding::Hold};
+    for (unsigned i = 0; i < size_t(Action::Count); ++i) {
+        uint8_t code = binding(binds[i]);
+        const auto game_id = registry()[selected_game].id;
+        if (i == size_t(Action::Primary) && code == key::Space &&
+            (game_id == GameId::SpaceInvaders || game_id == GameId::SpaceImpact || game_id == GameId::Breakout ||
+             game_id == GameId::Bomberman || game_id == GameId::Sokoban || game_id == GameId::Asteroids))
+            code = key::X;
+        bool press = (registry()[selected_game].id == GameId::BlockDrop && i < 2)
+                         ? input.repeat(code, now, 170, 45)
+                         : input.pressed(code);
+        if (i == size_t(Action::Up) && registry()[selected_game].id == GameId::BlockDrop &&
+            std::find(std::begin(settings.bindings), std::end(settings.bindings), key::X) ==
+                std::end(settings.bindings))
+            press |= input.pressed(key::X);
+        pending.press[i] |= press;
+        pending.held[i] = input.held(code);
+    }
+    accumulator += std::min(delta_us, uint64_t(100000));
+    const uint32_t period = independent ? 10000 : 16667;
+    while (accumulator >= period && active->status() == Status::Running) {
+        step_fraction += period;
+        uint32_t millis = step_fraction / 1000;
+        step_fraction %= 1000;
+        Controls frame = pending;
+        // A press followed by release between polls still gets one step.
+        for (size_t i = 0; i < frame.held.size(); ++i)
+            frame.held[i] |= frame.press[i];
+        active->update(millis, frame);
+        ++simulation_steps;
+        pending.press.fill(0);
+        accumulator -= period;
+    }
+    handle_sounds();
+    if (registry()[selected_game].id == GameId::Racer)
+        audio::engine(static_cast<const racer::RacerGame *>(active)->model.state.speed);
+}
+void Application::tick(uint64_t now_us) {
+    std::lock_guard<std::recursive_mutex> guard(state_mutex);
+    uint32_t now = uint32_t(now_us / 1000);
+    if (!independent) keyboard::drain(input, now);
     uint64_t delta = previous_us ? now_us - previous_us : 0;
     previous_us = now_us;
     if (current != Screen::Name && !(current == Screen::Remap && remap >= 0) &&
@@ -742,33 +825,7 @@ void Application::tick(uint64_t now_us) {
             input.end_frame();
             return;
         }
-        const Binding binds[] = {Binding::Left, Binding::Right,   Binding::Up,
-                                 Binding::Down, Binding::Primary, Binding::CounterRotate,
-                                 Binding::Hold};
-        for (unsigned i = 0; i < size_t(Action::Count); ++i) {
-            uint8_t code = binding(binds[i]);
-            bool press = (registry()[selected_game].id == GameId::BlockDrop && i < 2)
-                             ? input.repeat(code, now, 170, 45)
-                             : input.pressed(code);
-            if (i == size_t(Action::Up) && registry()[selected_game].id == GameId::BlockDrop &&
-                std::find(std::begin(settings.bindings), std::end(settings.bindings), key::X) ==
-                    std::end(settings.bindings))
-                press |= input.pressed(key::X);
-            pending.press[i] |= press;
-            pending.held[i] = input.held(code);
-        }
-        accumulator += std::min(delta, uint64_t(100000));
-        while (accumulator >= 16667 && active->status() == Status::Running) {
-            step_fraction += 16667;
-            uint32_t millis = step_fraction / 1000;
-            step_fraction %= 1000;
-            active->update(millis, pending);
-            pending.press.fill(0);
-            accumulator -= 16667;
-        }
-        handle_sounds();
-        if (registry()[selected_game].id == GameId::Racer)
-            audio::engine(static_cast<const racer::RacerGame *>(active)->model.state.speed);
+        if (!independent) advance_game(delta, now);
     }
     if (now_us - last_frame >= 16667 && surface) {
         bool changed = true;
@@ -788,17 +845,47 @@ void Application::tick(uint64_t now_us) {
             visual_crc = crc;
             visual_valid = true;
         }
-        if (changed)
-            lv_obj_invalidate(surface);
+        if (registry()[selected_game].id == GameId::Sokoban && active->status() == Status::Running) {
+            sokoban::State visible;
+            const auto &state = static_cast<const sokoban::SokobanGame *>(active)->model.state;
+            std::memcpy(&visible, &state, sizeof(visible));
+            visible.repeat_ms = 0; visible.elapsed /= 1000; visible.transition /= 40;
+            uint32_t crc = crc32(reinterpret_cast<const uint8_t *>(&visible), sizeof(visible));
+            changed = !visual_valid || crc != visual_crc;
+            visual_crc = crc; visual_valid = true;
+        }
+        if (changed) {
+            const auto id = registry()[selected_game].id;
+            // Animate the playfield every frame; refresh static labels/HUD at
+            // most every 100 ms. Always repaint everything on entry/game over.
+            const bool partial = active->status() == Status::Running && last_hud_frame &&
+                                 now_us - last_hud_frame < 100000;
+            lv_area_t area{};
+            if (partial && id == GameId::Snake) area = {231, 106, 1006, 641};
+            else if (partial && id == GameId::SpaceInvaders) area = {281, 96, 1008, 674};
+            else if (partial && id == GameId::SpaceImpact) area = {77, 137, 1202, 632};
+            else if (partial && id == GameId::Breakout) area = {236, 96, 1043, 643};
+            else if (partial && id == GameId::Frogger) area = {276, 106, 1003, 633};
+            else if (partial && id == GameId::Pacman) area = {331, 91, 938, 650};
+            else if (partial && id == GameId::Bomberman) area = {306, 116, 973, 607};
+            else if (partial && id == GameId::Asteroids) area = {261, 106, 1218, 633};
+            else {
+                lv_obj_invalidate(surface);
+                last_hud_frame = now_us;
+            }
+            if (area.x2 > area.x1) lv_obj_invalidate_area(surface, &area);
+        }
         last_frame = now_us - (now_us - last_frame) % 16667;
     }
     if (settings.fps && now_us - fps_since >= 1000000) {
         uint32_t frames = display::refreshes();
+        simulation_hz = float(simulation_steps - previous_steps) * 1000000.f / float(now_us - fps_since);
+        previous_steps = simulation_steps;
         fps = float(frames - frame_count) * 1000000.f / float(now_us - fps_since);
         frame_count = frames;
         fps_since = now_us;
         if (fps_label)
-            lv_label_set_text_fmt(fps_label, "Render: %.1f FPS", double(fps));
+            lv_label_set_text_fmt(fps_label, "Render %.1f FPS | Regras %.0f Hz", double(fps), double(simulation_hz));
     }
     input.end_frame();
 }

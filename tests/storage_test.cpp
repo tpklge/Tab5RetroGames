@@ -26,6 +26,21 @@ class Memory : public Backend {
         return true;
     }
 };
+class LateBackend : public Backend {
+  public:
+    explicit LateBackend(Memory &card) : card(card) {}
+    bool ready = false, reject = false;
+    bool prepare_write() override { ready = !reject; return ready; }
+    bool read(const std::string &key, std::vector<uint8_t> &bytes) override {
+        return ready && card.read(key, bytes);
+    }
+    bool write(const std::string &key, const std::vector<uint8_t> &bytes) override {
+        return ready && card.write(key, bytes);
+    }
+    bool erase(const std::string &key) override { return ready && card.erase(key); }
+  private:
+    Memory &card;
+};
 int main() {
     Memory memory;
     Journal journal(memory);
@@ -73,6 +88,35 @@ int main() {
     assert(!records.load(GameId::Snake, 0, 1, board));
     assert(journal.erase("save"));
     assert(!journal.read("save", 3, bytes));
+    Record efficient{}, inefficient{};
+    efficient.won = inefficient.won = 1;
+    efficient.distance = 12; inefficient.distance = 25;
+    efficient.score = 100; inefficient.score = 99999;
+    assert(record_better(GameId::Sokoban, 0, efficient, inefficient));
+    efficient.won = 0;
+    assert(!record_better(GameId::Sokoban, 0, efficient, inefficient));
+    efficient.won = 1;
+    assert(record_better(GameId::Sokoban, 2, efficient, inefficient));
+    Record long_campaign=efficient; long_campaign.level=20; long_campaign.distance=200;
+    inefficient.level=4;
+    assert(record_better(GameId::Sokoban,0,long_campaign,inefficient));
+    Record asteroid{}; std::strcpy(asteroid.player,"Piloto"); asteroid.score=500;
+    assert(records.add(GameId::Asteroids,0,0,asteroid));
+    assert(memory.values.count("rankA00a"));
+    assert(records.load(GameId::Asteroids,0,0,board) && board.entries[0].score==500);
+    assert(records.erase(GameId::Asteroids,0,0));
+    Memory inserted;
+    Journal previous(inserted);
+    assert(previous.write("save0", 3, {10}) && previous.write("save0", 3, {20}));
+    LateBackend late(inserted); Journal retry(late);
+    auto untouched = inserted.values;
+    late.reject = true;
+    assert(!retry.write("save0", 3, {30}) && inserted.values == untouched);
+    late.reject = false;
+    assert(retry.write("save0", 3, {30}));
+    assert(retry.read("save0", 3, bytes) && bytes == std::vector<uint8_t>({30}));
+    inserted.values["save0a"].back() ^= 0xff;
+    assert(retry.read("save0", 3, bytes) && bytes == std::vector<uint8_t>({20}));
     puts("PASS storage: CRC, schema/type, dual-generation recovery, failed writes, validated "
          "preferences, TOP10, category separation, sprint ordering and confirmed deletion backend");
 }

@@ -1,5 +1,5 @@
 esptool.py v4.12.0
-File size: 975104 (bytes)
+File size: 1092784 (bytes)
 
 ESP32P4 image header
 ====================
@@ -22,25 +22,25 @@ Segments information
 ====================
 Segment   Length   Load addr   File offs  Memory types
 -------  -------  ----------  ----------  ------------
-      0  0x40af0  0x400a0020  0x00000018  DROM, IROM
-      1  0x00068  0x30100000  0x00040b10  
-      2  0x0f490  0x4ff00000  0x00040b80  DRAM, BYTE_ACCESSIBLE, IRAM
-      3  0x98834  0x40000020  0x00050018  DROM, IROM
-      4  0x013e4  0x4ff0f490  0x000e8854  DRAM, BYTE_ACCESSIBLE, IRAM
-      5  0x04470  0x4ff10880  0x000e9c40  DRAM, BYTE_ACCESSIBLE, IRAM
-      6  0x0001c  0x50108080  0x000ee0b8  RTC_IRAM, RTC_DRAM
+      0  0x46924  0x400b0020  0x00000018  DROM, IROM
+      1  0x00068  0x30100000  0x00046944
+      2  0x0965c  0x4ff00000  0x000469b4  DRAM, BYTE_ACCESSIBLE, IRAM
+      3  0xa9ab0  0x40000020  0x00050018  DROM, IROM
+      4  0x072d0  0x4ff0965c  0x000f9ad0  DRAM, BYTE_ACCESSIBLE, IRAM
+      5  0x09eb0  0x4ff10980  0x00100da8  DRAM, BYTE_ACCESSIBLE, IRAM
+      6  0x0001c  0x50108080  0x0010ac60  RTC_IRAM, RTC_DRAM
 
 ESP32P4 image footer
 ====================
-Checksum: 0x59 (valid)
-Validation hash: 9b3e81ec75e3d47b48127b2ea3b7df07372252328a8eab1f1a457debae80e73f (valid)
+Checksum: 0x76 (valid)
+Validation hash: a19e492d89edc192f5b5b457ae45bc71a3a2c7ea2665e57e1790cf523e47d90b (valid)
 
 Application information
 =======================
 Project name: tab5_retro_arcade
-App version: 0.1.0
-Compile time: Oct  8 2026 01:37:08
-ELF file SHA256: 9e579ba64e4f6739e541a9ee600c98e922707d3ef1b74dcef721752b7ac5d93b
+App version: 0.2.0
+Compile time: Nov  7 2026 02:08:21
+ELF file SHA256: 750562746ee0f99f1a2ed00c7cb4e782a8960d052ce8cbe2d8da28a0dfb1cb7d
 ESP-IDF: v5.4.4
 Minimal eFuse block revision: 0.0
 Maximal eFuse block revision: 1.99

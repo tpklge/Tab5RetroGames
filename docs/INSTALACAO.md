@@ -18,12 +18,13 @@ O projeto Tab5Meshtastic registra um slot anterior de 1600 KiB em 0x1a0000.
 O exportador usa **1.638.400 bytes** como teto conservador. Isso não confirma
 um novo slot criado para este arcade. Confira espaço no Launcher instalado.
 
-NVS existente `nvs`, namespace `pipoca5`; namespaces de outros projetos são
-preservados. Ela precisa estar disponível e ter espaço. Falhas são informadas;
+Sem microSD utilizável, tenta NVS existente `nvs`, namespace `pipoca5`;
+namespaces de outros projetos são preservados. Essa alternativa precisa
+de partição disponível e espaço. Falhas são informadas;
 sair sem salvar requer confirmação. Não há erase automático na inicialização.
 
-Standalone reserva 128 KiB de NVS para 48 categorias TOP10, três saves e
-configurações com duas gerações. Os 24 KiB do layout anterior podem esgotar.
+Standalone reserva 128 KiB de NVS. A coleção atual tem cinco saves e até
+80 categorias TOP10, além de configurações com duas gerações. Os 24 KiB do layout anterior podem esgotar.
 Manter todas as categorias simultaneamente exige espaço adequado; OTA
 sozinha não amplia essa partição. A tabela do seu Tab5 não foi modificada.
 
@@ -54,3 +55,11 @@ São instruções: esses comandos não foram executados. Compatibilidade física
 permanece pendente para o LCD presente no aparelho.
 
 Referência: [partições ESP-IDF 5.4/P4](https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32p4/api-guides/partition-tables.html).
+
+## NVS ausente e partidas no microSD
+
+Esta versão salva os cinco jogos em `/pipoca5` no cartão FAT, sem precisar
+de partição NVS. Insira o cartão antes de iniciar; a pasta é criada
+automaticamente. A tela inicial informa o destino escolhido. Sem cartão
+utilizável, tenta NVS. Não altera a tabela de partições instalada nem apaga
+dados para resolver falhas. Consulte [salvamento](SALVAMENTO.md).

@@ -6,6 +6,7 @@
 #include "input_state.h"
 #include "menu.h"
 #include <functional>
+#include <mutex>
 namespace arcade {
 enum class Screen {
     Home,
@@ -25,16 +26,28 @@ enum class Screen {
 class Application {
   public:
     explicit Application(Backend &backend, std::function<std::string()> backup = {})
-        : journal(backend), records(journal), backup(std::move(backup)) {}
+        : backend(backend), journal(backend), records(journal), backup(std::move(backup)) {}
     void init();
     void tick(uint64_t now_us);
-    void input_event(uint8_t key, bool pressed, uint32_t now) { input.event(key, pressed, now); }
+    void independent_updates(bool enabled);
+    // Simulation/input only: no LVGL calls, safe on a dedicated task.
+    void poll_game(uint64_t now_us);
+    void input_event(uint8_t key, bool pressed, uint32_t now) {
+        std::lock_guard<std::recursive_mutex> guard(state_mutex);
+        input.event(key, pressed, now);
+    }
     Screen screen() const { return current; }
     const Settings &preferences() const { return settings; }
     const Game *active_game() const { return active; }
     void show(Screen screen, unsigned selection = 0);
 
   private:
+    std::recursive_mutex state_mutex;
+    bool independent = false;
+    uint64_t previous_game_us = 0;
+    uint32_t simulation_steps = 0, previous_steps = 0;
+    float simulation_hz = 0;
+    Backend &backend;
     Journal journal;
     Records records;
     Settings settings = default_settings();
@@ -47,6 +60,7 @@ class Application {
     lv_obj_t *surface = nullptr;
     lv_obj_t *fps_label = nullptr;
     uint64_t previous_us = 0, accumulator = 0, last_frame = 0, fps_since = 0, finished_since = 0;
+    uint64_t last_hud_frame = 0;
     uint32_t step_fraction = 0, frame_count = 0;
     uint32_t visual_crc = 0;
     bool visual_valid = false;
@@ -72,6 +86,7 @@ class Application {
     void navigation(uint32_t now);
     void draw(lv_layer_t *layer);
     void handle_sounds();
+    void advance_game(uint64_t delta_us, uint32_t now);
     uint8_t binding(Binding action) const { return settings.bindings[size_t(action)]; }
 };
 } // namespace arcade

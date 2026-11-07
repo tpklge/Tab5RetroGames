@@ -3,7 +3,7 @@
 1. Crie `main/games/nome/` com `config.h`, `model.h/.cpp`, `render.h/.cpp`.
    Modelo sem ESP-IDF/LVGL/periféricos: recebe `Options`, `Controls`, delta em
    milissegundos; publica `Result` e eventos `Sound`.
-2. Implemente `Game` (`game_manager/game.h`). `ModelGame<Model>` adapta ciclo,
+2. Implemente `Game` (`game_manager/game.h`). `ModelGame<Model, SuaClasseDeJogo>` adapta ciclo,
    pausa, save e limpeza de modelos compatíveis. Implemente `render(Canvas&)`
    e fábrica de instância estática, como nos jogos existentes.
 3. Acrescente ID ao final de `GameId`, sem renumerar os anteriores. Registre
@@ -28,3 +28,8 @@ rejeição explícita de saves anteriores.
 
 Core cuida de saves/TOP10. Modelos recebem ações lógicas; o desenho não altera
 a simulação. `cleanup()` limpa estado/libera recursos ao trocar de jogo.
+
+`render_copy()` deve fornecer uma cópia pré-alocada do modelo para a UI,
+separada do estado da simulação. O adaptador implementa isso automaticamente.
+Não chame LVGL no modelo: ele roda na tarefa de regras. Desenho só lê a
+cópia e não deve modificar estado ou chamar periféricos.

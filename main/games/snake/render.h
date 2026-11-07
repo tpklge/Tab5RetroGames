@@ -2,7 +2,7 @@
 #include "model.h"
 #include "model_game.h"
 namespace arcade::snake {
-class SnakeGame : public ModelGame<Model> {
+class SnakeGame : public ModelGame<Model, SnakeGame> {
   public:
     void render(Canvas &canvas) const override;
     void reset() override {

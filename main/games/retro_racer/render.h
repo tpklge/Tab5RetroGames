@@ -2,7 +2,7 @@
 #include "model.h"
 #include "model_game.h"
 namespace arcade::racer {
-class RacerGame : public ModelGame<Model> {
+class RacerGame : public ModelGame<Model, RacerGame> {
   public:
     void render(Canvas &canvas) const override;
 };

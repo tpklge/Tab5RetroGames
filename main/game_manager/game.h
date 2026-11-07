@@ -9,6 +9,7 @@ class Game {
     virtual void start() = 0;
     virtual void update(uint32_t delta_ms, const Controls &controls) = 0;
     virtual void render(Canvas &canvas) const = 0;
+    virtual Game *render_copy() const = 0;
     virtual void pause() = 0;
     virtual void resume() = 0;
     virtual std::vector<uint8_t> save() const = 0;

@@ -5,7 +5,7 @@
 #include <vector>
 #include <type_traits>
 namespace arcade {
-enum class GameId : uint8_t { BlockDrop, Snake, Racer };
+enum class GameId : uint8_t { BlockDrop, Snake, Racer, SpaceInvaders, SpaceImpact, Breakout, Frogger, Pacman, Bomberman, Sokoban, Asteroids };
 enum class Status : uint8_t { Running, Paused, Lost, Won };
 enum class Action : uint8_t { Left, Right, Up, Down, Primary, CounterRotate, Hold, Count };
 struct Controls {

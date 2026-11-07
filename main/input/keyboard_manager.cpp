@@ -36,7 +36,7 @@ bool init() {
             device.setInterruptConfig(0x01) == M5_TAB5_KB_OK &&
             device.clearEventQueue() == M5_TAB5_KB_OK &&
             device.clearInterruptStatus() == M5_TAB5_KB_OK &&
-            device.setInterruptMode(M5_TAB5_KB_INT_MODE_POLLING, 8) == M5_TAB5_KB_OK;
+            device.setInterruptMode(M5_TAB5_KB_INT_MODE_POLLING, 4) == M5_TAB5_KB_OK;
     if (!ready)
         cleanup();
     return ready;
